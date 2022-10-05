@@ -13,11 +13,12 @@
 #define pin_txd 2
 #define pin_rxd 4
 SoftwareSerial BTSerial(pin_txd, pin_rxd);
-#define tempo_r 300   // 5 minutos 
+#define tempo_r 1800   // 30 minutos 
 #define tempo_l 1800   // 30 minutos 
 #define rele_ligado 0
 #define rele_desligado 1
 #define espera_loop 1000   // 1 segundo
+#define communication_delay 500   // 100 milisegundos
 #define sensor_humidade 7
 #define pin_sensor_humidade A0
 #define tempo_definir_humidade_media 60   // 1 minuto
@@ -34,7 +35,7 @@ int segundos = 0;
 int humidade_atual = 0;
 int humidade_media = 0;
 int status_do_rele = 0;
-int irrigacao_automatica = 0;
+int irrigacao_automatica = 1;
 int tempo_rele_ligado = tempo_r;
 int tempo_retornar_logica = tempo_l;
 unsigned long int tempo_anterior = millis();
@@ -188,7 +189,7 @@ void LogicaIrrigacao() {
 }
 
 void LogicaComunicacao() {
-  if (millis() - tempo_anterior1 >= espera_loop) {
+  if (millis() - tempo_anterior1 >= communication_delay) {
 
     // Mandando status da irrigação
     if (irrigacao_automatica == 1) {
