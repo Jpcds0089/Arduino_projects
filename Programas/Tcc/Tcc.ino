@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------------------------------------------
 // Defines/Variables/Includes
 // ------------------------------------------------------------------------------------------------------------
-
+  
 /* Leds */
 #define led0 12
 
@@ -13,14 +13,14 @@
 #define pin_txd 2
 #define pin_rxd 4
 SoftwareSerial BTSerial(pin_txd, pin_rxd);
-#define tempo_r 300   // 5 minutos 
-#define tempo_l 1800   // 30 minutos 
+#define tempo_r 2400   // 40 mintos 
+#define tempo_l 10800   // 3 horas 
 #define rele_ligado 0
 #define rele_desligado 1
 #define espera_loop 1000   // 1 segundo
 #define sensor_humidade 7
 #define pin_sensor_humidade A0
-#define tempo_definir_humidade_media 60   // 1 minuto
+#define tempo_definir_humidade_media 300   // 5 minutos
 String command;
 String bt_command;
 int logg = 1;
@@ -79,9 +79,9 @@ void LogicaExeculsao(String result) {
 
   // "r" == Desabilitar rele
   } else if (result == "*r;"){
+    digitalWrite(rele1, rele_desligado);
     if (estagio != 2) {
       tempo_retornar_logica = tempo_l;
-      digitalWrite(rele1, rele_desligado);
       if (estagio != 0) {
           estagio = 2;
       }
@@ -209,16 +209,16 @@ void LogicaComunicacao() {
     // Mandando estágio atual da irigaçâo
     if (estagio == 1) {
       if (humidade_media == 1) {
-        BTSerial.write("*H1;");
+        BTSerial.write("*h1;");
         Print("Humidade Média: Seca");
       } else if (humidade_atual == 2) {
-        BTSerial.write("*H2;");
+        BTSerial.write("*h2;");
         Print("Humidade Média: Húmida");
       } else if (humidade_atual == 3) {
-        BTSerial.write("*H3;");
+        BTSerial.write("*h3;");
         Print("Humidade Média: Extremamente Húmida");
       } else {
-        BTSerial.write("*H0;");
+        BTSerial.write("*h0;");
       }
     } else if (estagio == 2) {
       BTSerial.write("*s1;");
