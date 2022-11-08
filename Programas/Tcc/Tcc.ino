@@ -1,7 +1,7 @@
 // ------------------------------------------------------------------------------------------------------------
 // Defines/Variables/Includes
 // ------------------------------------------------------------------------------------------------------------
-
+  
 /* Leds */
 #define led0 12
 
@@ -13,17 +13,17 @@
 #define pin_txd 2
 #define pin_rxd 4
 SoftwareSerial BTSerial(pin_txd, pin_rxd);
-#define tempo_r 1800   // 30 minutos 
-#define tempo_l 1800   // 30 minutos 
+#define tempo_r 2400   // 40 mintos 
+#define tempo_l 10800   // 3 horas
 #define rele_ligado 0
 #define rele_desligado 1
 #define espera_loop 1000   // 1 segundo
-#define communication_delay 500   // 100 milisegundos
+#define communication_delay 100   // 100 milisegundos
 #define sensor_humidade 7
 #define pin_sensor_humidade A0
-#define tempo_definir_humidade_media 60   // 1 minuto
-String command;
-String bt_command;
+#define tempo_definir_humidade_media 300   // 5 minutos
+String serial_command_recived;
+String bt_command_recived;
 int logg = 1;
 int humidade;
 int count1 = 0;
@@ -80,9 +80,9 @@ void LogicaExeculsao(String result) {
 
   // "r" == Desabilitar rele
   } else if (result == "*r;"){
+    digitalWrite(rele1, rele_desligado);
     if (estagio != 2) {
       tempo_retornar_logica = tempo_l;
-      digitalWrite(rele1, rele_desligado);
       if (estagio != 0) {
           estagio = 2;
       }
@@ -190,7 +190,9 @@ void LogicaIrrigacao() {
 
 void LogicaComunicacao() {
   if (millis() - tempo_anterior1 >= communication_delay) {
-
+    // Iniciando a string que receberá as informações atuais do programa que serão enviadas via bluetooth
+    String command_to_send = "";
+    
     // Mandando status da irrigação
     if (irrigacao_automatica == 1) {
       BTSerial.write("*y1;");
@@ -210,16 +212,16 @@ void LogicaComunicacao() {
     // Mandando estágio atual da irigaçâo
     if (estagio == 1) {
       if (humidade_media == 1) {
-        BTSerial.write("*H1;");
+        BTSerial.write("*h1;");
         Print("Humidade Média: Seca");
       } else if (humidade_atual == 2) {
-        BTSerial.write("*H2;");
+        BTSerial.write("*h2;");
         Print("Humidade Média: Húmida");
       } else if (humidade_atual == 3) {
-        BTSerial.write("*H3;");
+        BTSerial.write("*h3;");
         Print("Humidade Média: Extremamente Húmida");
       } else {
-        BTSerial.write("*H0;");
+        BTSerial.write("*h0;");
       }
     } else if (estagio == 2) {
       BTSerial.write("*s1;");
@@ -267,13 +269,13 @@ void loop() {
     digitalWrite(led0, 1);
 
     char serial_output = Serial.read();
-    command += serial_output;
+    serial_command_recived += serial_output;
     if (serial_output == ';') {
       //Serial.print("Comando Recebido: ");
-      //Serial.println(command); 
+      //Serial.println(serial_command_recived); 
 
-      if (command.substring(0,1) == "*") {
-        LogicaExeculsao(command);
+      if (serial_command_recived.substring(0,1) == "*") {
+        LogicaExeculsao(serial_command_recived);
       }
     }
 
@@ -285,17 +287,17 @@ void loop() {
   if (BTSerial.available()) {
     digitalWrite(led0, 1);
     char bt_output = BTSerial.read();
-    bt_command += bt_output;
+    bt_command_recived += bt_output;
     
     if (bt_output == ';') {
       Serial.print("Comando Recebido: ");
-      Serial.println(bt_command); 
+      Serial.println(bt_command_recived); 
       
-      if (bt_command.substring(0,1) == "*") {
-        LogicaExeculsao(bt_command);
-        bt_command = "";
+      if (bt_command_recived.substring(0,1) == "*") {
+        LogicaExeculsao(bt_command_recived);
+        bt_command_recived = "";
       } else {
-        bt_command = "";
+        bt_command_recived = "";
       }
     }
 
