@@ -44,6 +44,7 @@ void ReadKeys() {
   }
   if (key_down == 1 and key_up == 1) {
     alterar_modo_dos_leds = 1;
+    Serial.println("Execultando");
     key_up = 0; 
     key_down = 0;
   }
