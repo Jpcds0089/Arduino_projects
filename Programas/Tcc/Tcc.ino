@@ -1,7 +1,11 @@
 // ------------------------------------------------------------------------------------------------------------
 // Defines/Variables/Includes
 // ------------------------------------------------------------------------------------------------------------
-  
+
+
+/* Log */
+int logg = 0;
+
 /* Leds */
 #define led0 12
 
@@ -29,11 +33,10 @@ unsigned long int tempo_anterior1 = millis();
 #define pin_sensor_humidade A0
 #define tempo_r 30 //2400  // 40 mintos
 #define tempo_l 30 //10800  // 3 horas
-#define espera_loop 1000  // 1 segundo
-#define tempo_definir_humidade_media 30  //300  // 5 minutos
+#define espera_loop 30 //1000  // 1 segundo
+#define tempo_definir_humidade_media 30 //300  // 5 minutos
 String bd;
 bool send_informations = 0;
-int logg = 0;
 int humidade;
 int count1 = 0;
 int count2 = 0;
@@ -126,9 +129,12 @@ void LogicaIrrigacao() {
       Print("Fazendo a leitura do solo");
 
       // Leitura da humidade
+      // Sensor 1: Extremamente húmido(10, 39) | Húmido(40 - 74) | Seco(75 - 94)
+      // Sensor 2: Extremamente húmido(70, 100) | Húmido(30 - 69) | Seco(0 - 29)
+      // Sensor 3: Extremamente húmido(250, 600) | Húmido(600 - 950) | Seco(950 - 1010)
       int i;
       segundos++;
-      humidade = map(analogRead(pin_sensor_humidade), 0, 600, 0, 100); /*map(analogRead(A0), 250, 500, 0, 100);*/
+      humidade = map(analogRead(pin_sensor_humidade), 250, 1010, 0, 100); /*map(analogRead(A0), 250, 500, 0, 100);*/
 
       // Contando segundos e minutos
       if (segundos >= 60) {
@@ -154,25 +160,24 @@ void LogicaIrrigacao() {
       }
 
       // Definindo humidade atual e calculando humidade média
-      // Sensor 1: Extremamente húmido(10, 39) | Húmido(40 - 74) | Seco(75 - 94)
-      // Sensor 2: Extremamente húmido(70, 100) | Húmido(30 - 69) | Seco(0 - 29)
-      if ((humidade >= 0) and (humidade <= 29)) {
-        humidade_atual = 1;
-        count1++;
+      // humidade==1 Extremamente húmido | humidade_media==2 Húmido | humidade_media==3 Seco
+      if ((humidade >= 0) and (humidade <= 49)) {
+        humidade_atual = 3;
+        count3++;
       } else {
-        count1 = 0;
+        count3 = 0;
       }
-      if ((humidade >= 30) and (humidade <= 69)) {
+      if ((humidade >= 50) and (humidade <= 89)) {
         humidade_atual = 2;
         count2++;
       } else {
         count2 = 0;
       }
-      if ((humidade >= 70) and (humidade <= 100)) {
-        humidade_atual = 3;
-        count3++;
+      if ((humidade >= 90) and (humidade <= 100)) {
+        humidade_atual = 1;
+        count1++;
       } else {
-        count3 = 0;
+        count1 = 0;
       }
 
       // Definindo humidade média
@@ -189,9 +194,9 @@ void LogicaIrrigacao() {
         // Desblockeando a função de comunicação
         send_informations = 1;
         
-        // Salvando informações em uma variável
-        bd += ("bd = {"); 
-        bd += ("hm: 1, t: " + millis()); 
+        // Incluindo informações no "banco de dados"
+        bd += ("bd = {hm: 1, t: "); 
+        bd += (millis()); 
 
       } else if (count2 >= tempo_definir_humidade_media) {
         humidade_media = 2;
@@ -205,9 +210,9 @@ void LogicaIrrigacao() {
         // Desblockeando a função de comunicação
         send_informations = 1;
         
-        // Salvando informações em uma variável
-        bd += ("bd = {"); 
-        bd += ("hm: 2, t: " + millis()); 
+        // Incluindo informações no "banco de dados"
+        bd += ("bd = {hm: 2, t: "); 
+        bd += (millis()); 
 
       } else if (count3 >= tempo_definir_humidade_media) {
         humidade_media = 3;
@@ -221,9 +226,10 @@ void LogicaIrrigacao() {
         // Desblockeando a função de comunicação
         send_informations = 1;
         
-        // Salvando informações em uma variável
-        bd += ("bd = {"); 
-        bd += ("bd = {hm: 3, t: " + millis()); 
+
+        // Incluindo informações no "banco de dados"
+        bd += ("bd = {bd = {hm: 3, t: "); 
+        bd += (millis()); 
       }
 
       // Definindo o que fazer de acordo com a humidade média
@@ -236,8 +242,9 @@ void LogicaIrrigacao() {
         // Desblockeando a função de comunicação
         send_informations = 1;
         
-        // Salvando informações em uma variável
-        bd += (", init_i: " + millis()); 
+        // Incluindo informações no "banco de dados"
+        bd += (", init_i: "); 
+        bd += (millis()); 
       
       } else if ((humidade_media == 2) or (humidade_media == 3)) {
         estagio = 2;
@@ -245,8 +252,9 @@ void LogicaIrrigacao() {
         // Desblockeando a função de comunicação
         send_informations = 1;
         
-        // Salvando informações em uma variável
-        bd += (", init_s: " + millis()); 
+        // Incluindo informações no "banco de dados"
+        bd += (", init_s: "); 
+        bd += (millis()); 
       }
 
       // Estágio 2: Esperar um tempo determinado para fazer a próxima leitura da humidade do solo
@@ -273,9 +281,14 @@ void LogicaIrrigacao() {
         // Desblockeando a função de comunicação
         send_informations = 1;
         
-        // Salvando informações em uma variável
-        bd += (", finish_s: " + millis()); 
+        // Incluindo informações no "banco de dados"
+        bd += (", finish_esp: "); 
+        bd += (millis()); 
         bd += ("}, "); 
+
+        if ((logg == 0) and (bd != "")) {
+          Serial.println(bd);
+        }
       }
 
       // Estágio 3: Irrigando caso o solo esteja seco (humidade média == 1)
@@ -289,14 +302,15 @@ void LogicaIrrigacao() {
 
       if (tempo_rele_ligado < 1) {
         digitalWrite(rele1, rele_desligado);
+        tempo_rele_ligado = tempo_r;
         estagio = 2;
         
         // Desblockeando a função de comunicação
         send_informations = 1;
         
-        // Salvando informações em uma variável
-        bd += (", finish_i: " + millis()); 
-        bd += ("}, "); 
+        // Incluindo informações no "banco de dados"
+        bd += (", finish_i: "); 
+        bd += (millis()); 
       }
     }
     tempo_anterior = millis();
@@ -374,20 +388,16 @@ void IrrigationManualControl() {
   if (digitalRead(automatic_irrigation_button_pin) == LOW) {
     key_up_btn1 = 0;
     key_down_btn1 = 1;
-    Serial.println("Apertou");
   } if ((digitalRead(automatic_irrigation_button_pin) == HIGH) and (key_down_btn1 == 1)) {
     key_up_btn1 = 1;
-    Serial.println("Soltou");
   }
   
   // Definindo se o botão da irrigação está apertado ou não
   if (digitalRead(irrigation_button_pin) == LOW) {
     key_up_btn2 = 0;
     key_down_btn2 = 1;
-    Serial.println("Apertou");
   } if ((digitalRead(irrigation_button_pin) == HIGH) and (key_down_btn2 == 1)) {
     key_up_btn2 = 1;
-    Serial.println("Soltou");
   }
 
   // Execultando ações caso o botão foi apertado
@@ -395,6 +405,7 @@ void IrrigationManualControl() {
     
     // Habilitando a irrigação automática
     if (irrigacao_automatica == 0) {
+      Serial.println("Btn da irrigação automática foi ativado");
       irrigacao_automatica = 1;
       digitalWrite(sensor_humidade, 1);
       digitalWrite(rele1, rele_desligado);
