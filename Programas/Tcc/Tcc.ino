@@ -4,7 +4,8 @@
 
 
 /* Log */
-int logg = 0;
+int logg = 1;
+int show_bd = 1;
 
 /* Leds */
 #define led0 12
@@ -31,10 +32,10 @@ unsigned long int tempo_anterior1 = millis();
 #define rele_desligado 1
 #define sensor_humidade 8
 #define pin_sensor_humidade A0
-#define tempo_r 30 //2400  // 40 mintos
-#define tempo_l 30 //10800  // 3 horas
-#define espera_loop 30 //1000  // 1 segundo
-#define tempo_definir_humidade_media 30 //300  // 5 minutos
+#define tempo_r 2400  // 40 mintos
+#define tempo_l 10800  // 3 horas
+#define espera_loop 1000  // 1 segundo
+#define tempo_definir_humidade_media 300  // 5 minutos
 String bd;
 bool send_informations = 0;
 int humidade;
@@ -286,7 +287,7 @@ void LogicaIrrigacao() {
         bd += (millis()); 
         bd += ("}, "); 
 
-        if ((logg == 0) and (bd != "")) {
+        if ((show_bd == 1) and (bd != "")) {
           Serial.println(bd);
         }
       }
