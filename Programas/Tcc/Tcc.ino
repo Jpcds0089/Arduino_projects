@@ -5,21 +5,23 @@
 
 /* Log */
 int logg = 1;
-int show_bd = 1;
+
+/* bd */
+int show_bd = 0;
 
 /* Leds */
-#define led0 12
+#define led0 0  //12
 
 /* Reles */
-#define rele1 9
+#define rele1 12  //9
 
 /* Serial */
 String serial_command_recived;
 
 /* Bluetooth serial */
 #include <SoftwareSerial.h>
-#define pin_txd 2
-#define pin_rxd 3
+#define pin_txd 5  //2
+#define pin_rxd 16  //3
 String bt_command_recived;
 SoftwareSerial BTSerial(pin_txd, pin_rxd);
 
@@ -33,7 +35,7 @@ unsigned long int tempo_anterior1 = millis();
 #define sensor_humidade 8
 #define pin_sensor_humidade A0
 #define tempo_r 2400  // 40 mintos
-#define tempo_l 10800  // 3 horas
+#define tempo_l 1800  // 30 mintos
 #define espera_loop 1000  // 1 segundo
 #define tempo_definir_humidade_media 300  // 5 minutos
 String bd;
@@ -41,7 +43,7 @@ bool send_informations = 0;
 int humidade;
 int count1 = 0;
 int count2 = 0;
-int count3 = 0;
+int count3 = 0; 
 int estagio = 1;
 int minutos = 0;
 int segundos = 0;
@@ -124,18 +126,24 @@ void LogicaExeculsao(String result) {
 void LogicaIrrigacao() {
   if ((millis() - tempo_anterior >= espera_loop) and (irrigacao_automatica == 1)) {
 
+    // Lendo a humidade do solo
+    humidade = map(analogRead(pin_sensor_humidade), 250, 1010, 0, 100); /*map(analogRead(A0), 250, 500, 0, 100);*/
+
+    // Algumas regras da numeração da humidade
+    if (humidade >= 100) {
+      humidade = 100;
+    } else if (humidade <= 0) {
+      humidade = 0;
+    }
+
     // Estágio 1: fazer leitura do solo
     if (estagio == 1) {
-      // Log
-      Print("Fazendo a leitura do solo");
-
       // Leitura da humidade
       // Sensor 1: Extremamente húmido(10, 39) | Húmido(40 - 74) | Seco(75 - 94)
       // Sensor 2: Extremamente húmido(70, 100) | Húmido(30 - 69) | Seco(0 - 29)
       // Sensor 3: Extremamente húmido(250, 600) | Húmido(600 - 950) | Seco(950 - 1010)
       int i;
       segundos++;
-      humidade = map(analogRead(pin_sensor_humidade), 250, 1010, 0, 100); /*map(analogRead(A0), 250, 500, 0, 100);*/
 
       // Contando segundos e minutos
       if (segundos >= 60) {
@@ -146,35 +154,27 @@ void LogicaIrrigacao() {
         minutos = 0;
       }
 
-      // Algumas regras da numeração da humidade
-      if (humidade >= 100) {
-        humidade = 100;
-      } else if (humidade <= 0) {
-        humidade = 0;
-      }
-
       // Log
-      if (logg == 1) {
-        Serial.print("Humidade atual: ");
-        Serial.print(humidade);
-        Serial.println("%");
-      }
+      //Serial.println("Fazendo a leitura da humidade do solo");
+      //Serial.print("Humidade atual: ");
+      //Serial.print(humidade);
+      //Serial.println("%");
 
       // Definindo humidade atual e calculando humidade média
-      // humidade==1 Extremamente húmido | humidade_media==2 Húmido | humidade_media==3 Seco
-      if ((humidade >= 0) and (humidade <= 49)) {
+      // humidade_media==3 Extremamente húmido | humidade_media==2 Húmido | humidade_media==1 Seco
+      if ((humidade >= 0) and (humidade <= 39)) {
         humidade_atual = 3;
         count3++;
       } else {
         count3 = 0;
       }
-      if ((humidade >= 50) and (humidade <= 89)) {
+      if ((humidade >= 40) and (humidade <= 69)) {
         humidade_atual = 2;
         count2++;
       } else {
         count2 = 0;
       }
-      if ((humidade >= 90) and (humidade <= 100)) {
+      if ((humidade >= 70) and (humidade <= 100)) {
         humidade_atual = 1;
         count1++;
       } else {
@@ -199,6 +199,10 @@ void LogicaIrrigacao() {
         bd += ("bd = {hm: 1, t: "); 
         bd += (millis()); 
 
+        if ((show_bd == 1) and (bd != "")) {
+          Serial.println(bd);
+        }        
+
       } else if (count2 >= tempo_definir_humidade_media) {
         humidade_media = 2;
         digitalWrite(sensor_humidade, 0);
@@ -214,6 +218,10 @@ void LogicaIrrigacao() {
         // Incluindo informações no "banco de dados"
         bd += ("bd = {hm: 2, t: "); 
         bd += (millis()); 
+
+        if ((show_bd == 1) and (bd != "")) {
+          Serial.println(bd);
+        }        
 
       } else if (count3 >= tempo_definir_humidade_media) {
         humidade_media = 3;
@@ -231,6 +239,10 @@ void LogicaIrrigacao() {
         // Incluindo informações no "banco de dados"
         bd += ("bd = {bd = {hm: 3, t: "); 
         bd += (millis()); 
+
+        if ((show_bd == 1) and (bd != "")) {
+          Serial.println(bd);
+        }        
       }
 
       // Definindo o que fazer de acordo com a humidade média
@@ -246,8 +258,12 @@ void LogicaIrrigacao() {
         // Incluindo informações no "banco de dados"
         bd += (", init_i: "); 
         bd += (millis()); 
+
+        if ((show_bd == 1) and (bd != "")) {
+          Serial.println(bd);
+        }
       
-      } else if ((humidade_media == 2) or (humidade_media == 3)) {
+      } else if (humidade_media == 2) {
         estagio = 2;
       
         // Desblockeando a função de comunicação
@@ -256,6 +272,26 @@ void LogicaIrrigacao() {
         // Incluindo informações no "banco de dados"
         bd += (", init_s: "); 
         bd += (millis()); 
+
+        if ((show_bd == 1) and (bd != "")) {
+          Serial.println(bd);
+        }
+        
+      } else if (humidade_media == 3) {
+        estagio = 2;
+        tempo_retornar_logica += tempo_l / 4;
+      
+        // Desblockeando a função de comunicação
+        send_informations = 1;
+        
+        // Incluindo informações no "banco de dados"
+        bd += (", init_s: "); 
+        bd += (millis()); 
+
+        if ((show_bd == 1) and (bd != "")) {
+          Serial.println(bd);
+        }
+        
       }
 
       // Estágio 2: Esperar um tempo determinado para fazer a próxima leitura da humidade do solo
@@ -288,7 +324,9 @@ void LogicaIrrigacao() {
         bd += ("}, "); 
 
         if ((show_bd == 1) and (bd != "")) {
+          //Serial.println("#=====================================================================#");
           Serial.println(bd);
+          //Serial.println("#=====================================================================#");
         }
       }
 
@@ -312,6 +350,10 @@ void LogicaIrrigacao() {
         // Incluindo informações no "banco de dados"
         bd += (", finish_i: "); 
         bd += (millis()); 
+
+        if ((show_bd == 1) and (bd != "")) {
+          Serial.println(bd);
+        }
       }
     }
     tempo_anterior = millis();
@@ -510,8 +552,8 @@ void loop() {
     char serial_output = Serial.read();
     serial_command_recived += serial_output;
     if (serial_output == ';') {
-      //Serial.print("Comando Recebido: ");
-      //Serial.println(serial_command_recived);
+      Serial.print("Comando Recebido do serial: ");
+      Serial.println(serial_command_recived);
 
       if (serial_command_recived.substring(0, 1) == "*") {
         LogicaExeculsao(serial_command_recived);
